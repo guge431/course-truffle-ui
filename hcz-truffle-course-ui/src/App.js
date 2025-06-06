@@ -9,61 +9,16 @@ import TokenExchange from './components/TokenExchange.jsx';
 import CourseGrid from './components/CourseGrid.jsx';
 import { ethers} from "ethers";
 import {CONTRACTS} from './config/contracts.js';
-import { formatUnits } from "ethers";
-// import CONTRACTS from './config/contracts.js';
-
-// const sepoliaRpc = "https://sepolia.infura.io/v3/37baea89ed7b45eea3d1938a8bc93ba0";
-// const sepoliaParams = {
-//   chainId: '0xaa36a7', // 11155111 in hex
-//   chainName: 'Sepolia Test Network',
-//   rpcUrls: ['https://sepolia.infura.io/v3/37baea89ed7b45eea3d1938a8bc93ba0'], // 替换为你的 RPC
-//   nativeCurrency: {
-//     name: 'SepoliaETH',
-//     symbol: 'ETH',
-//     decimals: 18
-//   },
-//   blockExplorerUrls: ['https://sepolia.etherscan.io']
-// };
-// const CONTRACTS = {
-//   MyCoin: { address: '0x1dd4529E768311029220E78cB2aCe76884705Be0', abi: [
-//     "function balanceOf(address owner) view returns (uint256)",
-//                     "function decimals() view returns (uint8)",
-//                     "function symbol() view returns (string)",
-//                     "function name() view returns (string)"
-//   ] },
-//   ExchangeETH: { address: '0x952e18d91e7093eaF980FF679265Ea5CAE9bebe3', abi: [
-//     "function balanceOf(address owner) view returns (uint256)",
-//                     "function decimals() view returns (uint8)",
-//                     "function symbol() view returns (string)",
-//                     "function name() view returns (string)"
-//   ] },
-//   BuyCourses: { address: '0x33E24BC62e32e9db2a001b117E96348D1f540847', abi: [
-//     "function balanceOf(address owner) view returns (uint256)",
-//                     "function decimals() view returns (uint8)",
-//                     "function symbol() view returns (string)",
-//                     "function name() view returns (string)"
-//   ] }
-// };
-// 这是直接定义的，不需要引入文件或包
-// const erc20Abi = [
-//   "function balanceOf(address owner) view returns (uint256)",
-//   "function decimals() view returns (uint8)",
-//   "function symbol() view returns (string)"
-// ];
 
 // 主应用组件
 export default function CryptoCoursePlatform() {
   const [activeTab, setActiveTab] = useState('exchange');
- 
- 
- 
-  // const [contracts, setContracts] = useState({});
   const [ethAmount, setEthAmount] = useState('');
 
-  
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('');
+
 
 
   // 获取当前钱包信息
@@ -126,7 +81,7 @@ export default function CryptoCoursePlatform() {
 
       
         //加载课程
-        loadCourses(signer);
+        loadCourses(signer,address);
       } catch (err) {
         console.error(err);
         setError('连接钱包失败：' + err.message);
@@ -149,7 +104,7 @@ export default function CryptoCoursePlatform() {
   }
 }
   // 加载课程
-  const loadCourses = async(signer) => {
+  const loadCourses = async(signer,address) => {
     try {
     const coursesContract = new ethers.Contract(CONTRACTS.BuyCourses.address, CONTRACTS.BuyCourses.abi, signer);
     //课程总数
@@ -158,15 +113,18 @@ export default function CryptoCoursePlatform() {
     const courses = [];
     for (let i = 0; i < courseCount; i++) {
       const course = await coursesContract.getCourse(i);
+      const isPurchase = await coursesContract.hasPurchased(address,i)
       courses.push({
         id: i,
         name: course[0],
         description: course[1],
         price:course[2],
-        teacher: course[3]
+        teacher: course[3],
+        isPurchase:isPurchase
       });
     }
     setCourses(courses)
+    console.log('hecgebg', courses)
     } catch (error) {
       console.error("获取所有课程失败:", error);
     }
@@ -197,33 +155,26 @@ export default function CryptoCoursePlatform() {
     }
     setLoading(false);
   };
-
-  
   // 购买课程
   const purchaseCourse = async (courseId, price) => {
-    console.log(44444444,courseId,courses);
-    return
     setLoading(true);
     setError('');
+    const coursesContract = new ethers.Contract(CONTRACTS.BuyCourses.address, CONTRACTS.BuyCourses.abi, signer);
+    const tokenAddress = await coursesContract.token();
+    const tokenContract = new ethers.Contract(
+      tokenAddress,
+      CONTRACTS.MyCoin.abi, // 代币合约的 ABI
+      signer
+    );
+    await tokenContract.approve(CONTRACTS.BuyCourses.address, price);
     try {
-      const coursesContract = new ethers.Contract(CONTRACTS.BuyCourses.address, CONTRACTS.BuyCourses.abi, signer);
-      const isHas=await coursesContract.hasUserPurchased(account,courseId)
-     
-      if(!isHas){
-        setStatus('您已经购买过该课程！');
-        return;
-      }else{
         setStatus('授权交易已提交，等待确认...');
         const tx=await coursesContract.purchaseCourse(courseId)
-     
         setStatus('购买交易已提交，等待确认...');
         await tx.wait();
         setStatus('课程购买成功！');
-      
-        // setCourses(courses.map(course => {
-          
-        // }));
-      }
+        loadCourses(signer,account)
+
     } catch (err) {
       setError('购买失败: ' + err.message);
     }

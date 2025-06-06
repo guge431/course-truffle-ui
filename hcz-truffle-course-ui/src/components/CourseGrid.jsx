@@ -49,7 +49,7 @@ export default function CourseGrid({ courses, onPurchase, loading,onAddCourse}) 
             <div style={{color: 'rgba(255,255,255,0.7)', marginBottom: '15px'}}>
               <strong>讲师:</strong> {course.teacher.slice(0, 6)}...{course.teacher.slice(-4)}
             </div>
-            { !loading ? (
+            { courses.isPurchase ? (
               <button 
                 style={{
                   ...styles.button,
