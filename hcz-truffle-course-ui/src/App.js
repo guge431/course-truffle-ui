@@ -19,8 +19,6 @@ export default function CryptoCoursePlatform() {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('');
 
-
-
   // 获取当前钱包信息
   const [account, setAccount] = useState('');
   const [network, setNetwork] = useState('');
@@ -40,8 +38,6 @@ export default function CryptoCoursePlatform() {
     price: '',
     teacher: ''
   });
-
-
 
   // 连接钱包
   const connectWallet = async () => {
